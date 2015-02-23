@@ -1,0 +1,21 @@
+html,body {
+	margin:0px;
+	padding:0px;
+}
+
+body {
+	background: #fff;
+	-webkit-transition: background .5s ease-out; /* For Safari 3.1 to 6.0 */
+    transition: background .5s ease-out;
+}
+
+
+canvas {
+	position: absolute;
+	width:100%;
+	height:100%;
+}
+
+.substrate-canvas {
+	
+}
