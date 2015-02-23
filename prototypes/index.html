@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Substrate</title>
+
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+		<link rel="stylesheet" type="text/css" href="css/main.css">
+		<script src="js/bongiovi/Scheduler.js"></script>
+		<script src="js/bongiovi/ColorThemes.js"></script>
+
+		<script src="js/libs/Perlin.js"></script>
+		<script src="js/libs/dat.gui.js"></script>
+		<script src="js/libs/glMatrix-0.9.5.min.js"></script>
+		<script src="js/Bitmap.js"></script>
+		<script src="js/ColourLovers.js"></script>
+		<script src="js/MarchingLines.js"></script>
+		<script src="js/Index.js"></script>
+		<script>
+			var main, scheduler, gui, images;
+			var params = {};
+
+			function init() {
+				scheduler  = new Scheduler();
+				main = new Main();
+
+				var gui = new dat.GUI({width:300});
+				gui.add(main, "reset");
+				// gui.add(main, "download");
+			}
+		</script>
+	</head>
+
+	<body onload="init()">
+	</body>
+</html>
+
