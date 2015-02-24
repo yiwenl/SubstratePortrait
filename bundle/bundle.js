@@ -44,6 +44,7 @@ var MarchingLine = require("./MarchingLine.js");
 
 
 	p.loop = function() {
+		if(this.lines.length == 0) return;
 		if(this._isStopped) return;
 
 		for(var j=0; j<3; j++) {
