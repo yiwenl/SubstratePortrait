@@ -61,6 +61,17 @@ p.delayMixPixel = function(x, y, r, g, b, a) {
 	this.delaySetPixel(x, y, nr, ng, nb, na);
 }
 
+p.darkenPixel = function(x, y, r, g, b, a) {
+	var pixel = this.getPixel(x, y);
+
+	var na = a + pixel.a;
+	var nr = 255 - a + r * na/255;
+	var ng = 255 - a + g * na/255;
+	var nb = 255 - a + b * na/255;
+
+	this.delaySetPixel(x, y, nr, ng, nb, na);
+};
+
 
 p.delaySetPixel = function(x, y, r, g, b, a) {
 	var tx = Math.floor(x);

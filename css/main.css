@@ -19,3 +19,15 @@ canvas {
 .substrate-canvas {
 	
 }
+
+.save {
+	position: absolute;
+	bottom: 0px;
+	right :0px;
+	margin: 25px;
+	cursor: pointer;
+	font-family: Tahoma;
+	font-size:14px;
+	letter-spacing: 2px;
+	z-index: 10;
+}

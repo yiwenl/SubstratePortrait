@@ -10,12 +10,13 @@ var hexToRgb = function(hex) {
 }
 var MIN_SPWAN_WIDTH = 40;
 
-function MarchingLine(pos, dir, color, bmp) {
+function MarchingLine(pos, dir, color, bmp, pixels) {
 	this.pos      = pos;
 	this.startPos = vec3.clone(this.pos);
 	this.dir      = dir;
 	this.color    = hexToRgb(color);
 	this.color    = {r:0, g:0, b:0};
+	this.pixels   = pixels;
 
 	this.speed    = vec3.clone(dir);
 	this.bmp      = bmp;
@@ -53,17 +54,24 @@ p.draw = function() {
 	var noiseOffset = .005;
 	var noiseRange = 300;
 	var noise = Perlin.noise(this.pos[0]*noiseOffset, this.pos[1]*noiseOffset, this.seed);
-	// noise *= noise;
-	// noise *= noise;
+
+
 	noise *= noiseRange;
-	var shadowOffset = 1.0;
+	var shadowOffset = .1;
 	var n = vec3.create();
 	for(var i=1; i<noise; i++) {
 		vec3.scale(n, this.shadows, i);
 		vec3.add(n, n, this.pos);
-		var alpha = (1 - Math.sin(i/noise * Math.PI * .5)) * 30;
-		if(this.bmp.getPixel(n[0], n[1]).a != 255)
-			this.bmp.delayMixPixel(n[0], n[1], this.color.r*shadowOffset, this.color.g*shadowOffset, this.color.b*shadowOffset, alpha);
+		var alpha = (1 - Math.sin(i/noise * Math.PI * .5)) * 50;
+		if(this.bmp.getPixel(n[0], n[1]).a != 255) {
+			var pixel = this.pixels.getPixel(n[0], n[1]);
+
+			if(this.bmp.getPixel(n[0], n[1]).a < 255 - pixel.r) {
+				this.bmp.delayMixPixel(n[0], n[1], pixel.r, pixel.g, pixel.b, alpha);
+				// this.bmp.darkenPixel(n[0], n[1], pixel.r, pixel.g, pixel.b, alpha);
+			}
+		}
+			
 	}
 };
 

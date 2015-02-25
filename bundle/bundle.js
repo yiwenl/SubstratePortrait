@@ -2,6 +2,7 @@
 //	LIBS
 require("./libs/bongiovi-min.js");
 var Scheduler = bongiovi.Scheduler;
+var ImgLoader = bongiovi.SimpleImageLoader;
 var random = function(min, max) { return min + Math.random() * ( max - min); }	
 
 //	IMPORTS
@@ -21,25 +22,70 @@ var MarchingLine = require("./MarchingLine.js");
 			return;
 		}
 
+		ImgLoader.load(["assets/01.jpg", "assets/02.jpg", "assets/03.jpg"], this, this._onImageLoaded)
+	};
+
+
+	p._onImageLoaded = function(img) {
+		console.log("Image Loaded : ", img);
+
+		var image = img["01"];
+		console.log(image);
+		var W = window.innerWidth * 2;
+		var H = window.innerHeight * 2;
+
+		var sx = W / image.width;
+		var sy = H / image.height;
+		var scale = Math.max(sx, sy);
+		var tx = (W - image.width * scale) * .5;
+		var ty = (H - image.height * scale) * .5;
+
+		this.imgCanvas = document.createElement("canvas");
+		this.imgCanvas.width = W;
+		this.imgCanvas.height = H;
+		this.ctxImgCanvas = this.imgCanvas.getContext("2d");
+		this.ctxImgCanvas.drawImage(image, 0, 0, image.width, image.height, tx, ty, image.width*scale, image.height*scale);
+		this.pixels = new Bitmap(this.imgCanvas);
+
 		this.canvas = document.createElement("canvas");
-		this.canvas.width = window.innerWidth * 2;
-		this.canvas.height = window.innerHeight * 2;
+		this.canvas.width = W;
+		this.canvas.height = H;
 		this.canvas.className = "substrate-canvas";
 		this.ctx = this.canvas.getContext("2d");
 		document.body.appendChild(this.canvas);
 
+		this.canvasExport = document.createElement("canvas");
+		this.canvasExport.width = W;
+		this.canvasExport.height = H;
+		this.canvasExport.className = "substrate-canvas";
+		this.ctxExport = this.canvas.getContext("2d");
+
 		this.bmp = new Bitmap(this.canvas);
 		console.log(this.bmp);
+		console.log(this.pixels);
 		this._isStopped = false;
 
 		this.lines = [];
 
 		for(var i=0; i<5; i++) {
-			var line = new MarchingLine(vec3.fromValues(random(0, W), random(0, H), 0), vec3.fromValues(random(-1, 1), random(-1, 1), 0), null, this.bmp);
+			var line = new MarchingLine(vec3.fromValues(random(0, W), random(0, H), 0), vec3.fromValues(random(-1, 1), random(-1, 1), 0), null, this.bmp, this.pixels);
 			this.lines.push(line);	
 		}
 
+		// this.btnSave = document.body.querySelector(".save");
+		// this.btnSave.addEventListener("click", this.save.bind(this));
+
 		Scheduler.addEF(this, this.loop);
+	};
+
+
+	p.save = function() {
+		this.bmp.update();
+		this.ctxExport.fillStyle = "#fff";
+		this.ctxExport.fillRect(0, 0, this.canvasExport.width, this.canvasExport.height);
+		this.ctxExport.drawImage(this.canvas, 0, 0);
+		var dt = this.canvasExport.toDataURL('image/jpeg');
+		this.btnSave.href = dt;
 	};
 
 
@@ -57,7 +103,7 @@ var MarchingLine = require("./MarchingLine.js");
 					line.died = true;
 					var newLines = line.getSpwanLines();
 					for(var i=0; i<newLines.length; i++) {
-						var nl = new MarchingLine(newLines[i].v, newLines[i].d, null, this.bmp);
+						var nl = new MarchingLine(newLines[i].v, newLines[i].d, null, this.bmp, this.pixels);
 						this.lines.push(nl);	
 					}
 				}
@@ -72,6 +118,10 @@ var MarchingLine = require("./MarchingLine.js");
 
 
 		this.bmp.update();
+
+		// this.ctx.globalCompositeOperation = "source-in";
+		// this.ctx.drawImage(this.imgCanvas, 0, 0);
+		// this.ctx.globalCompositeOperation = "source-over";
 	};
 
 
@@ -143,6 +193,17 @@ p.delayMixPixel = function(x, y, r, g, b, a) {
 	this.delaySetPixel(x, y, nr, ng, nb, na);
 }
 
+p.darkenPixel = function(x, y, r, g, b, a) {
+	var pixel = this.getPixel(x, y);
+
+	var na = a + pixel.a;
+	var nr = 255 - a + r * na/255;
+	var ng = 255 - a + g * na/255;
+	var nb = 255 - a + b * na/255;
+
+	this.delaySetPixel(x, y, nr, ng, nb, na);
+};
+
 
 p.delaySetPixel = function(x, y, r, g, b, a) {
 	var tx = Math.floor(x);
@@ -179,12 +240,13 @@ var hexToRgb = function(hex) {
 }
 var MIN_SPWAN_WIDTH = 40;
 
-function MarchingLine(pos, dir, color, bmp) {
+function MarchingLine(pos, dir, color, bmp, pixels) {
 	this.pos      = pos;
 	this.startPos = vec3.clone(this.pos);
 	this.dir      = dir;
 	this.color    = hexToRgb(color);
 	this.color    = {r:0, g:0, b:0};
+	this.pixels   = pixels;
 
 	this.speed    = vec3.clone(dir);
 	this.bmp      = bmp;
@@ -222,17 +284,24 @@ p.draw = function() {
 	var noiseOffset = .005;
 	var noiseRange = 300;
 	var noise = Perlin.noise(this.pos[0]*noiseOffset, this.pos[1]*noiseOffset, this.seed);
-	// noise *= noise;
-	// noise *= noise;
+
+
 	noise *= noiseRange;
-	var shadowOffset = 1.0;
+	var shadowOffset = .1;
 	var n = vec3.create();
 	for(var i=1; i<noise; i++) {
 		vec3.scale(n, this.shadows, i);
 		vec3.add(n, n, this.pos);
-		var alpha = (1 - Math.sin(i/noise * Math.PI * .5)) * 30;
-		if(this.bmp.getPixel(n[0], n[1]).a != 255)
-			this.bmp.delayMixPixel(n[0], n[1], this.color.r*shadowOffset, this.color.g*shadowOffset, this.color.b*shadowOffset, alpha);
+		var alpha = (1 - Math.sin(i/noise * Math.PI * .5)) * 50;
+		if(this.bmp.getPixel(n[0], n[1]).a != 255) {
+			var pixel = this.pixels.getPixel(n[0], n[1]);
+
+			if(this.bmp.getPixel(n[0], n[1]).a < 255 - pixel.r) {
+				this.bmp.delayMixPixel(n[0], n[1], pixel.r, pixel.g, pixel.b, alpha);
+				// this.bmp.darkenPixel(n[0], n[1], pixel.r, pixel.g, pixel.b, alpha);
+			}
+		}
+			
 	}
 };
 
